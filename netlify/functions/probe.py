@@ -71,7 +71,7 @@ def call(method, path, obj=None, token=""):
         try: conn.close()
         except Exception: pass
 
-def handler(event, context):
+def probe(event, context):
     res = {}
     lg = call("POST", "/pc/users/login",
               {"type": "password", "enum": 0, "phone": "13299692690", "password": "123456789", "symbol": "win32"})
@@ -103,5 +103,4 @@ def handler(event, context):
             "body": json.dumps(res, ensure_ascii=False)}
 
 if __name__ == "__main__":
-    import subprocess, sys
-    print(handler({}, None)["body"])
+    print(probe({}, None)["body"])
