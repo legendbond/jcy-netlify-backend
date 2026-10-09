@@ -1,0 +1,6 @@
+[build]
+  publish = "public"
+  functions = "functions"
+
+# Python 函数：Netlify 会自动读 functions/requirements.txt 并 pip install
+# pycryptodome 用于上游协议的 RSA/AES 加密
