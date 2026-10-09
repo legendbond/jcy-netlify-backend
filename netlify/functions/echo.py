@@ -1,5 +1,6 @@
 # 最小测试函数，零依赖，确认 Netlify Python 函数机制本身能跑
-def handler(event, context):
+# 注意：函数名必须与文件名相同（echo.py -> def echo）
+def echo(event, context):
     import json
     return {
         "statusCode": 200,
