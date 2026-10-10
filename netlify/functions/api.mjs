@@ -135,3 +135,5 @@ if (process.env.NODE_TEST === "1") {
   const test = await call("GET", "/pc/channel?top-level=true", null, "");
   console.log("channel:", test.http, test.parsed ? (test.parsed.code + " count=" + ((test.parsed.data||[]).length)) : test.raw);
 }
+
+// api-rebuild-bump 20261010_122739
