@@ -137,3 +137,5 @@ export default async () => {
   else res.verdict = "unknown code=" + res.info_code + " raw=" + (info.raw || "").slice(0, 120);
   return new Response(JSON.stringify(res), { status: 200, headers: { "Content-Type": "application/json" } });
 };
+
+// rebuild-bump 120712
