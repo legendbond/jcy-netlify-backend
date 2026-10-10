@@ -112,21 +112,66 @@ function call(method, path, obj, token){
 }
 
 export { enc, dec, pyJson, pkcs7, pkcs7Unpad, call, authHeader, PARAMS_KEY, PARAMS_IV, PUB_KEY, PRIV_KEY, HOST, PORT, APPID, VERSION, PLANFORM, INTERNAL, APP_VERSION, SYMBOL };
-export default async () => {
+function qs(o){ const p = new URLSearchParams(); for (const [k, v] of Object.entries(o)) { if (v !== undefined && v !== null && v !== "") p.set(k, String(v)); } return p.toString(); }
+
+// 全接口分发（复用同文件 call）：模块 video/user/users
+async function dispatch(m, t, d, token){
+  if (m === "video") {
+    if (t === "videoList") return await call("GET", "/pc/video/list?" + qs({ channel: d.channel, page: d.page || 1, limit: d.limit || 30 }), null, token);
+    if (t === "videoDetail") return await call("GET", "/pc/video/detail?" + qs({ id: d.id }), null, token);
+    if (t === "videoPlay") return await call("GET", "/pc/video/play?" + qs({ id: d.id, part: d.part, play: "mp4" }), null, token);
+    if (t === "videoSearch") return await call("GET", "/pc/search?" + qs({ keyword: d.key, q: d.key, page: d.page || 1, limit: d.limit || 20 }), null, token);
+    if (t === "videoBuy") return await call("POST", "/pc/video/buy", { id: Number(d.id), part: d.part || "", play: "mp4" }, token);
+    if (t === "channel") return await call("GET", "/pc/channel?top-level=true", null, token);
+    if (t === "danmu") return await call("GET", "/pc/danmaku/comments?" + qs({ id: d.id, part: d.part }), null, token);
+    return await call("GET", "/pc/users/info", null, token);
+  }
+  if (m === "user") {
+    if (t === "login") return await call("POST", "/pc/users/login", { type: d.type || "password", enum: d.enum ?? 0, phone: d.phone || "", email: d.email || "", password: d.password || "", symbol: "win32" }, "");
+    if (t === "register") return await call("POST", "/pc/users/register", { phone: d.phone || "", email: d.email || "", password: d.password || "" }, "");
+    if (t === "logout") return await call("POST", "/pc/users/logout", {}, token);
+    return await call("GET", "/pc/users/info", null, token);
+  }
+  if (m === "users") {
+    if (t === "gold") return await call("GET", "/pc/video/gold", null, token);
+    if (t === "taskList") return await call("GET", "/pc/task/list", null, token);
+    if (t === "signInfo") return await call("GET", "/pc/sign/info", null, token);
+    if (t === "sign") return await call("POST", "/pc/sign", {}, token);
+    if (t === "invite") return await call("GET", "/pc/invite/info", null, token);
+    return await call("GET", "/pc/users/info", null, token);
+  }
+  return await call("GET", "/pc/users/info", null, token);
+}
+
+export default async (req) => {
+  const json = (o) => new Response(JSON.stringify(o), { status: 200, headers: { "Content-Type": "application/json" } });
+  // 双模式：带 {module} 的 POST -> 全接口网关；否则 -> 出口连通性探测
+  let body = {};
+  try {
+    if (req && req.method !== "GET") body = JSON.parse(await req.text());
+  } catch (e) {}
+  if (body && body.module) {
+    const m = body.module, t = body.type || "", d = body.data || {}, token = body.token || "";
+    const res = await dispatch(m, t, d, token);
+    if (res.error) return json({ code: 50000, message: res.error, module: m, type: t });
+    if (!res.parsed) return json({ code: res.http || -1, message: "upstream http " + res.http, raw: (res.raw || "").slice(0, 120) });
+    return json(res.parsed);
+  }
+  // ---- 原探测行为 ----
   const res = {};
   const lg = await call("POST", "/pc/users/login", { type: "password", enum: 0, phone: "13299692690", password: "123456789", symbol: "win32" }, "");
   res.login_http = lg.http;
   res.login_code = (lg.parsed || {}).code;
   if (lg.error) {
     res.verdict = "CONNECT_FAIL: Netlify 出口到不了 " + HOST + ":" + PORT + " (" + lg.error + ")";
-    return new Response(JSON.stringify(res), { status: 200, headers: { "Content-Type": "application/json" } });
+    return json(res);
   }
   res.login_raw = (lg.raw || "").slice(0, 150);
   const tok = ((lg.parsed || {}).data || {}).token || "";
   res.has_token = !!tok;
   if (!tok) {
     res.verdict = "login http=" + lg.http + " code=" + res.login_code + " 未取到 token (见 login_raw)";
-    return new Response(JSON.stringify(res), { status: 200, headers: { "Content-Type": "application/json" } });
+    return json(res);
   }
   const info = await call("GET", "/pc/users/info", null, tok);
   res.info_http = info.http;
@@ -135,7 +180,5 @@ export default async () => {
   else if (res.info_code === 20000) res.verdict = "20000 - 上游接受 Netlify 出口 IP，可部署全接口";
   else if (res.info_code === 50008) res.verdict = "50008 - 上游拒 Netlify 出口 IP（同 Cloudflare）";
   else res.verdict = "unknown code=" + res.info_code + " raw=" + (info.raw || "").slice(0, 120);
-  return new Response(JSON.stringify(res), { status: 200, headers: { "Content-Type": "application/json" } });
+  return json(res);
 };
-
-// rebuild-bump 120712
