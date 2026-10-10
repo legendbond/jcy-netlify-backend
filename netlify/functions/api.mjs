@@ -130,10 +130,4 @@ export default async (req) => {
   return done(res);
 };
 
-// 本地自测（NODE_TEST=1）— 包进 async IIFE，避免模块顶层 await 导致 Netlify esbuild 打包失败
-if (process.env.NODE_TEST === "1") {
-  (async () => {
-    const test = await call("GET", "/pc/channel?top-level=true", null, "");
-    console.log("channel:", test.http, test.parsed ? (test.parsed.code + " count=" + ((test.parsed.data||[]).length)) : test.raw);
-  })();
-}
+// （自测逻辑已移除，保持与可 build 的 probe.mjs 同构，避免 Netlify esbuild 打包失败）
