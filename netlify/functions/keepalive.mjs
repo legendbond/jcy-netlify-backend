@@ -1,5 +1,5 @@
 // 囧次元 防休眠保活（Netlify 定时函数）— 让网关保持 warm，避免冷启动连上游 ETIMEDOUT
-// 用法：在 Netlify 控制台 Functions -> keepalive -> Enable scheduled function，设 cron "*/5 * * * *"(每5分钟)
+// 定时配置：每 5 分钟一次 = 288 次/月（Free 计划 scheduled runs 每月 1000 次上限，安全）
 // 逻辑：复用 probe.mjs 底层 call 做一次轻量 login（最便宜、且顺带验证出口仍被上游认）
 import { call, HOST, PORT } from "./probe.mjs";
 
@@ -16,4 +16,9 @@ export default async () => {
     ms: Date.now() - t0,
   };
   return new Response(JSON.stringify(out), { status: 200, headers: { "Content-Type": "application/json" } });
+};
+
+// Netlify 定时函数配置（ESM 函数内声明式，build 后自动注册）
+export const config = {
+  schedule: "*/5 * * * *" // 每 5 分钟触发一次
 };
