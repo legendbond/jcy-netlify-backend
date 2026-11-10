@@ -237,8 +237,12 @@ async function playPayload(vid, part, token){
 // 全接口分发（复用同文件 call）：模块 video/user/users
 async function dispatch(m, t, d, token){
   if (m === "video") {
-    if (t === "videoList") return await call("GET", "/pc/video/list?" + qs({ channel: d.channel, page: d.page || 1, limit: d.limit || 30 }), null, token);
+    if (t === "videoList") return await call("GET", "/pc/video/list?" + qs({ channel: d.channel ?? 0, page: d.page || 1, limit: d.limit || 30, sort: d.sort || "addtime", area: d.area, type: d.type }), null, token);
     if (t === "videoDetail") return await call("GET", "/pc/video/detail?" + qs({ id: d.id }), null, token);
+    // 9.3 完全对齐电脑版：banner 轮播 /pc/banners/{channel}（channel 走路径）
+    if (t === "banners") return await call("GET", "/pc/banners/" + (d.channel ?? 0), null, token);
+    // 9.3 完全对齐电脑版：频道详情 /pc/channel/{id}
+    if (t === "channelDetail") return await call("GET", "/pc/channel/" + d.id, null, token);
     if (t === "videoPlay") {
       // 9.3 完整播放链：上游 play -> VO 转码出直链；403101/403501 自动 buy；空源梯度重试；8s 缓存
       // 返回 call() 同构格式，供 handler 统一处理
